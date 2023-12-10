@@ -10,6 +10,7 @@ const NavigationBar = () => {
         <Nav className="mr-auto">
           <Nav.Link as={Link} to="/home">Home</Nav.Link>
           <Nav.Link as={Link} to="/playlist">Playlist</Nav.Link>
+          <Nav.Link as={Link} to="/albums">Albums</Nav.Link>
         </Nav>
       </Navbar.Collapse>
     </Navbar>

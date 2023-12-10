@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Container, InputGroup, FormControl, ListGroup, Pagination } from 'react-bootstrap';
+import { Container, InputGroup, FormControl, Button, Table, Pagination } from 'react-bootstrap';
+import InsertTrackForm from './InsertTrackForm';
 import './Home.css';
 
 const ITEMS_PER_PAGE = 15; // Number of items per page
@@ -13,34 +14,36 @@ const Home = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showInsertForm, setShowInsertForm] = useState(false);
+  const [filteredData, setFilteredData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (searchTerm.length >= 3 || searchTerm === '') {
-        try {
-          setLoading(true);
-          const response = await axios.get(`http://localhost:8080/tracks/search?track_name=${searchTerm}`);
-          setTracksList(response.data);
-        } catch (error) {
-          console.error('Error fetching data from API:', error);
-          setError('An error occurred while fetching data.');
-        } finally {
-          setLoading(false);
-        }
+      try {
+        setLoading(true);
+        const response = await axios.get(`http://localhost:8080/tracks`);
+        setTracksList(response.data);
+        setFilteredData(response.data);
+      } catch (error) {
+        console.error('Error fetching data from API:', error);
+        setError('An error occurred while fetching data.');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [searchTerm]);
+  }, []);
 
-  const handleSearch = (event) => {
-    setSearchTerm(event.target.value);
-    setCurrentPage(1); // Reset current page on new search
+  const Filter = (event) => {
+    const searchTerm = event.target.value.toLowerCase();
+    setSearchTerm(searchTerm);
+    setFilteredData(tracksList.filter(track => track.name.toLowerCase().includes(searchTerm) || track.artist.toLowerCase().includes(searchTerm)));
   };
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  const maxPages = Math.ceil(tracksList.length / ITEMS_PER_PAGE);
+  const maxPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
   const startPage = Math.max(1, currentPage - Math.floor(PAGES_TO_SHOW / 2));
   const endPage = Math.min(startPage + PAGES_TO_SHOW - 1, maxPages);
 
@@ -104,31 +107,48 @@ const Home = () => {
     return items;
   };
 
+  const handleShowInsertForm = () => setShowInsertForm(true);
+  const handleCloseInsertForm = () => setShowInsertForm(false);
+
   return (
     <Container>
-      <h1 className="app-title">Search App</h1>
+      <h1 className="app-title">Tracks</h1>
       <InputGroup className="mb-3">
         <FormControl
           placeholder="Search..."
           value={searchTerm}
-          onChange={handleSearch}
+          onChange={Filter}
         />
       </InputGroup>
 
       {loading && <p>Loading...</p>}
       {error && <p className="error-message">{error}</p>}
+      {/* <Button variant="primary" onClick={handleShowInsertForm} className="mb-3">
+        Insert New Track
+      </Button> */}
 
-      <ListGroup>
-        {tracksList
-          .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
-          .map((trackName, index) => (
-            <ListGroup.Item key={index} className="track-item">
-              <Link to={`/track/${encodeURIComponent(trackName)}`} className="track-link">
-                {trackName}
-              </Link>
-            </ListGroup.Item>
-          ))}
-      </ListGroup>
+      <Table striped bordered hover>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Artist</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredData
+            .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+            .map((track, index) => (
+              <tr key={index}>
+                <td>
+                  <Link to={`/track/${encodeURIComponent(track.name)}`} className = 'track-link'>
+                    {track.name}
+                  </Link>
+                </td>
+                <td>{track.artist}</td>
+              </tr>
+            ))}
+        </tbody>
+      </Table>
 
       {/* Pagination component */}
       {maxPages > 1 && (
@@ -136,6 +156,8 @@ const Home = () => {
           {renderPaginationItems()}
         </Pagination>
       )}
+
+      <InsertTrackForm show={showInsertForm} handleClose={handleCloseInsertForm} />
     </Container>
   );
 };
